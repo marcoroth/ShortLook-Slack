@@ -15,15 +15,18 @@
     NSURL *channels_info_url = [NSURL URLWithString:@"https://slack.com/api/channels.info"];
     NSURL *users_profile_get_url = [NSURL URLWithString:@"https://slack.com/api/users.profile.get"];
 
+    NSString *user_id_params = [NSString stringWithFormat:@"token=%@&channel=%@", token, slack_id];
+
     if ([message_type isEqualToString:@"D"]){
-      NSMutableDictionary *json = [self makeApiCall:im_history_url params:[NSString stringWithFormat:@"token=%@&channel=%@", token, slack_id]];
+      NSMutableDictionary *json = [self makeApiCall:im_history_url params:user_id_params];
       user_id = json[@"messages"][0][@"user"];
     } else if([message_type isEqualToString:@"C"]){
-      NSMutableDictionary *json = [self makeApiCall:channels_info_url params:[NSString stringWithFormat:@"token=%@&channel=%@", token, slack_id]];
+      NSMutableDictionary *json = [self makeApiCall:channels_info_url params:user_id_params];
       user_id = json[@"channel"][@"latest"][@"user"];
     }
 
-    NSMutableDictionary *user_json = [self makeApiCall:users_profile_get_url params:[NSString stringWithFormat:@"token=%@&user=%@", token, user_id]];
+    NSString *avatar_url_params = [NSString stringWithFormat:@"token=%@&user=%@", token, user_id];
+    NSMutableDictionary *user_json = [self makeApiCall:users_profile_get_url params:avatar_url_params];
     avatar_url = user_json[@"profile"][@"image_192"];
 
     return [NSClassFromString(@"DDNotificationContactPhotoPromiseOffer") offerDownloadingPromiseWithPhotoIdentifier:avatar_url fromURL:[NSURL URLWithString:avatar_url]];
