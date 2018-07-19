@@ -4,8 +4,6 @@
 
   - (DDNotificationContactPhotoPromiseOffer *)contactPhotoPromiseOfferForNotification:(DDUserNotification *)notification {
     NSString *user_id;
-    NSString *avatar_url;
-
     NSString *token = @"";
     NSString *slack_url = [notification.applicationUserInfo valueForKeyPath:@"url"];
     NSString *slack_id = [self valueForKey:@"id" fromQueryItems:[[NSURLComponents alloc] initWithString:slack_url].queryItems];
@@ -27,7 +25,7 @@
 
     NSString *avatar_url_params = [NSString stringWithFormat:@"token=%@&user=%@", token, user_id];
     NSMutableDictionary *user_json = [self makeApiCall:users_profile_get_url params:avatar_url_params];
-    avatar_url = user_json[@"profile"][@"image_192"];
+    NSString *avatar_url = user_json[@"profile"][@"image_192"];
 
     return [NSClassFromString(@"DDNotificationContactPhotoPromiseOffer") offerDownloadingPromiseWithPhotoIdentifier:avatar_url fromURL:[NSURL URLWithString:avatar_url]];
   }
