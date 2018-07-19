@@ -1,0 +1,9 @@
+Package: ch.marco-roth.shortlook.plugin.contact-photo.slack
+Name: Slack Profile Pictures for ShortLook
+Depends: mobilesubstrate, co.dynastic.ios.tweak.shortlook
+Version: 1.0.0
+Architecture: iphoneos-arm
+Description: Show Slack users' profile pictures in ShortLook when you receive a Slack notification!
+Maintainer: Marco Roth
+Author: Marco Roth
+Section: Tweaks (ShortLook)
