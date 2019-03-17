@@ -23,6 +23,7 @@
 
     NSString *containerPath = [FolderFinder findDataFolder:@"com.tinyspeck.chatlyio"];
     NSString *databasePath = [NSString stringWithFormat:@"%@/Library/Application Support/Slack/%@/Database/main_db", containerPath, teamId];
+    NSString *imageURLStr;
 
     const char *dbpath = [databasePath UTF8String];
     sqlite3 *_slackdb;
@@ -34,16 +35,18 @@
       if (sqlite3_prepare_v2(_slackdb, stmt, -1, &statement, NULL) == SQLITE_OK) {
         if (sqlite3_step(statement) == SQLITE_ROW) {
           const unsigned char *result = sqlite3_column_text(statement, 0);
-          NSString *imageURLStr = [NSString stringWithUTF8String:(char *)result];
-          NSURL *imageURL = [NSURL URLWithString:imageURLStr];
-
-          return [NSClassFromString(@"DDNotificationContactPhotoPromiseOffer") offerDownloadingPromiseWithPhotoIdentifier:imageURLStr fromURL:imageURL];
+          imageURLStr = [NSString stringWithUTF8String:(char *)result];
         }
         sqlite3_finalize(statement);
       }
       sqlite3_close(_slackdb);
     }
 
-    return nil;
+    if (imageURLStr) {
+      NSURL *imageURL = [NSURL URLWithString:imageURLStr];
+      return [NSClassFromString(@"DDNotificationContactPhotoPromiseOffer") offerDownloadingPromiseWithPhotoIdentifier:imageURLStr fromURL:imageURL];
+    } else {
+      return nil;
+    }
   }
 @end
