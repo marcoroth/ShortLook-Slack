@@ -1,4 +1,4 @@
-Package: ch.marco-roth.shortlook.plugin.contact-photo.slack
+Package: ch.marcoroth.shortlook.plugin.contact-photo.slack
 Name: Slack Profile Pictures for ShortLook
 Depends: mobilesubstrate, co.dynastic.ios.tweak.shortlook
 Version: 1.0.0
