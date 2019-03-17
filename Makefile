@@ -7,6 +7,7 @@ $(BUNDLE_NAME)_CFLAGS = -fobjc-arc
 $(BUNDLE_NAME)_FILES = $(wildcard *.m)
 $(BUNDLE_NAME)_FRAMEWORKS = UIKit
 $(BUNDLE_NAME)_INSTALL_PATH = /Library/Dynastic/ShortLook/Plugins/ContactPhotoProviders
+$(BUNDLE_NAME)_LDFLAGS = -lsqlite3
 
 include $(THEOS_MAKE_PATH)/bundle.mk
 

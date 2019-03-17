@@ -1,51 +1,49 @@
+#import <sqlite3.h>
+#import "FolderFinder.h"
 #import "SlackContactPhotoProvider.h"
 
 @implementation SlackContactPhotoProvider
-
   - (DDNotificationContactPhotoPromiseOffer *)contactPhotoPromiseOfferForNotification:(DDUserNotification *)notification {
-    NSString *user_id;
-    NSString *token = @"";
-    NSString *slack_url = [notification.applicationUserInfo valueForKeyPath:@"url"];
-    NSString *slack_id = [self valueForKey:@"id" fromQueryItems:[[NSURLComponents alloc] initWithString:slack_url].queryItems];
-    NSString *message_type = [slack_id substringToIndex:1];
+    NSDictionary *alert = [notification applicationUserInfo];
+    NSString *body = alert[@"aps"][@"alert"][@"body"];
+    NSString *threadId = alert[@"aps"][@"thread-id"];
+    NSString *messageType = [threadId substringToIndex:1];
+    NSString *teamId = [notification.applicationUserInfo valueForKeyPath:@"team_id"];
+    NSString *username;
 
-    NSURL *im_history_url = [NSURL URLWithString:@"https://slack.com/api/im.history"];
-    NSURL *channels_info_url = [NSURL URLWithString:@"https://slack.com/api/channels.info"];
-    NSURL *users_profile_get_url = [NSURL URLWithString:@"https://slack.com/api/users.profile.get"];
-
-    NSString *user_id_params = [NSString stringWithFormat:@"token=%@&channel=%@", token, slack_id];
-
-    if ([message_type isEqualToString:@"D"]){
-      NSMutableDictionary *json = [self makeApiCall:im_history_url params:user_id_params];
-      user_id = json[@"messages"][0][@"user"];
-    } else if([message_type isEqualToString:@"C"]){
-      NSMutableDictionary *json = [self makeApiCall:channels_info_url params:user_id_params];
-      user_id = json[@"channel"][@"latest"][@"user"];
+    if ([messageType isEqualToString:@"D"]){
+      username = [body componentsSeparatedByString:@":"][0];
+    } else if([messageType isEqualToString:@"C"]){
+      username = [body componentsSeparatedByString:@":"][0];
+      username = [body componentsSeparatedByString:@" "][1];
     }
 
-    NSString *avatar_url_params = [NSString stringWithFormat:@"token=%@&user=%@", token, user_id];
-    NSMutableDictionary *user_json = [self makeApiCall:users_profile_get_url params:avatar_url_params];
-    NSString *avatar_url = user_json[@"profile"][@"image_192"];
+    username = [username stringByReplacingOccurrencesOfString:@":" withString:@""];
+    username = [username stringByReplacingOccurrencesOfString:@"@" withString:@""];
 
-    return [NSClassFromString(@"DDNotificationContactPhotoPromiseOffer") offerDownloadingPromiseWithPhotoIdentifier:avatar_url fromURL:[NSURL URLWithString:avatar_url]];
+    NSString *containerPath = [FolderFinder findDataFolder:@"com.tinyspeck.chatlyio"];
+    NSString *databasePath = [NSString stringWithFormat:@"%@/Library/Application Support/Slack/%@/Database/main_db", containerPath, teamId];
+
+    const char *dbpath = [databasePath UTF8String];
+    sqlite3 *_slackdb;
+
+    if (sqlite3_open(dbpath, &_slackdb) == SQLITE_OK) {
+      const char *stmt = [[NSString stringWithFormat:@"SELECT 'https://ca.slack-edge.com/' || ZTEAMID || '-' || ZTSID ||  '-' || ZAVATARHASH || '-512' as url FROM ZSLKCOREDATAUSER WHERE ZNAME = '%@';", username] UTF8String];
+      sqlite3_stmt *statement;
+
+      if (sqlite3_prepare_v2(_slackdb, stmt, -1, &statement, NULL) == SQLITE_OK) {
+        if (sqlite3_step(statement) == SQLITE_ROW) {
+          const unsigned char *result = sqlite3_column_text(statement, 0);
+          NSString *imageURLStr = [NSString stringWithUTF8String:(char *)result];
+          NSURL *imageURL = [NSURL URLWithString:imageURLStr];
+
+          return [NSClassFromString(@"DDNotificationContactPhotoPromiseOffer") offerDownloadingPromiseWithPhotoIdentifier:imageURLStr fromURL:imageURL];
+        }
+        sqlite3_finalize(statement);
+      }
+      sqlite3_close(_slackdb);
+    }
+
+    return nil;
   }
-
-  - (NSString *)valueForKey:(NSString *)key fromQueryItems:(NSArray *)queryItems {
-    NSPredicate *predicate = [NSPredicate predicateWithFormat:@"name=%@", key];
-    NSURLQueryItem *queryItem = [[queryItems filteredArrayUsingPredicate:predicate]firstObject];
-    return queryItem.value;
-  }
-
-  -(NSMutableDictionary *)makeApiCall:(NSURL *)url params:(NSString *)params {
-    NSError *error;
-    NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:url];
-    [request setHTTPMethod:@"POST"];
-    [request setHTTPBody:[params dataUsingEncoding:NSUTF8StringEncoding]];
-
-    NSData *data = [NSURLConnection sendSynchronousRequest:request returningResponse:nil error:&error];
-    NSMutableDictionary *json = [NSJSONSerialization JSONObjectWithData: data options: NSJSONReadingMutableContainers error: &error];
-
-    return json;
-  }
-
 @end
